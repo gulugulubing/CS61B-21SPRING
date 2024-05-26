@@ -113,14 +113,13 @@ public class Repository {
 
             }
 
-
             clearStaging();
             commit.setBlobs(bList);
             commit.setxParent(ref.getLast());
         }
         //System.out.println("commit date: " + dateToString(commit.getDate()));
         //System.out.println("commit msg: " + commit.getMessage());
-        String sha1Code = Utils.sha1(dateToString(commit.getDate()));
+        String sha1Code = Utils.sha1(dateToString(commit.getDate()), commit.getMessage());
         File commitPath = Utils.join(COMMITS_DIR, sha1Code);
         Utils.writeObject(commitPath, commit);
 
@@ -181,7 +180,8 @@ public class Repository {
     public static void log() {
         String currentBranch = Utils.plainFilenamesIn(CurrentBranch).get(0);
         String currentCommitShaId = findCommit(currentBranch);
-        while (currentCommitShaId != null) {
+        int i = 0;
+        while (currentCommitShaId != null && i < 3 ) {
             Commit currentCommit = readObject(Utils.join(COMMITS_DIR, currentCommitShaId), Commit.class);
 
             System.out.println("===");
@@ -191,6 +191,7 @@ public class Repository {
             System.out.println();
 
             currentCommitShaId = currentCommit.getxParent();
+            i++;
         }
     }
     private static void clearStaging() {
