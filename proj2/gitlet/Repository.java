@@ -18,6 +18,8 @@ import static gitlet.Utils.*;
  *      - staging area/ -- folder containing current staged files which are represented by blobs
  *                          When files(blobs) are in this area, it means that they are tracked by gitlet and
  *                          prepare to be committed
+ *      - removal area/ --folder containing gitlet rm files(blobs) just like staging area which temporary records
+ *                        operations
  *      - commits/ -- folder containing all the serialized commits, file name is sha1
  *      - blobs/   -- folder containing all the serialized blobs, file name is sha1
  *      - refs/     --folder containing refs, file name is branch name, fields are blobs name(sha1)
@@ -41,6 +43,7 @@ public class Repository {
     public static final File BLOBS_DIR = join(GITLET_DIR, "blobs");
 
     public static final File STAGING_DIR = join(GITLET_DIR, "staging");
+    public static final File REMOVAL_DIR = join(GITLET_DIR, "removal");
 
     public static final File REF_DIR = join(GITLET_DIR, "refs");
 
@@ -54,12 +57,16 @@ public class Repository {
         if (!BLOBS_DIR.exists()) {
             BLOBS_DIR.mkdir();
         }
+
+        addFromRemoval(filename);
+
         File filepath = Utils.join(CWD, filename);
         String fileContent = Utils.readContentsAsString(filepath);
-        String sha1Code = sha1(fileContent);
+        String sha1Code = sha1(fileContent,filename);
 
         File blobPath = Utils.join(BLOBS_DIR, sha1Code);
         if (!blobPath.exists()) {
+            //only new blob will create because olds have been all recorded
             Blob blob = new Blob(filename, fileContent);
             Utils.writeObject(blobPath, blob);
             File stagePath = Utils.join(STAGING_DIR, sha1Code);
@@ -67,10 +74,29 @@ public class Repository {
         }
     }
 
+    /*see rm function     */
+    private static void addFromRemoval(String filename) {
+        String blobToRestoreId = null;
+
+        for (String removalBlob : Utils.plainFilenamesIn(REMOVAL_DIR)) {
+            Blob b = Utils.readObject(Utils.join(BLOBS_DIR, removalBlob), Blob.class);
+            if (b.getFileName().equals(filename)) {
+                //Utils.writeContents(Utils.join(CWD, filename), b.getFileContent());
+                blobToRestoreId = removalBlob;
+                break;
+            }
+        }
+        if (blobToRestoreId != null) {
+            Utils.join(REMOVAL_DIR, blobToRestoreId).delete();
+        }
+    }
+
+
     public static void init() {
         GITLET_DIR.mkdir();
         COMMITS_DIR.mkdir();
         STAGING_DIR.mkdir();
+        REMOVAL_DIR.mkdir();
         REF_DIR.mkdir();
         CurrentBranch.mkdir();
         Utils.writeContents(Utils.join(CurrentBranch, "master"), "");
@@ -95,16 +121,19 @@ public class Repository {
             commit.setDate(new Date());
             String lastCommitSha1 = ref.getLast();
             HashMap<String, String> bList;
+            HashMap<String, String> bRevomalList;
             //System.out.println(lastCommitSha1);
             Commit lastCommit = Utils.readObject(Utils.join(COMMITS_DIR, lastCommitSha1), Commit.class);
             bList = lastCommit.getBlobs();
-            if (bList == null) {
-                bList = new HashMap<>();
-            }
+            bRevomalList = lastCommit.getRemovalBlobs();
 
-            if (Utils.plainFilenamesIn(STAGING_DIR).size() == 0) {
+            if (Utils.plainFilenamesIn(STAGING_DIR).size() == 0 && Utils.plainFilenamesIn(REMOVAL_DIR).size() ==0) {
                 System.out.println(Utils.error("No changes added to the commit."));
                 System.exit(0);
+            }
+
+            if (bList == null) {
+                bList = new HashMap<>();
             }
             for (String blobSha1 : Utils.plainFilenamesIn(STAGING_DIR)) {
                 Blob b = Utils.readObject(Utils.join(STAGING_DIR, blobSha1), Blob.class);
@@ -113,8 +142,18 @@ public class Repository {
 
             }
 
+            if (bRevomalList == null) {
+                bRevomalList = new HashMap<>();
+            }
+            for (String blobSha1 : Utils.plainFilenamesIn(REMOVAL_DIR)) {
+                Blob b = Utils.readObject(Utils.join(REMOVAL_DIR, blobSha1), Blob.class);
+                bRevomalList.put(b.getFileName(), blobSha1);
+
+            }
+
             clearStaging();
             commit.setBlobs(bList);
+            commit.setRemovalBlobs(bRevomalList);
             commit.setxParent(ref.getLast());
         }
         //System.out.println("commit date: " + dateToString(commit.getDate()));
@@ -154,8 +193,7 @@ public class Repository {
            System.exit(0);
         } else {
            clearStaging();
-           String oldBranchName = Utils.plainFilenamesIn(CurrentBranch).get(0);
-           String oldShaIdOfCommit = findCommit(oldBranchName);
+           String oldShaIdOfCommit = findCommit(nameOfBranches.get(0));
            Commit oldCommit = Utils.readObject(Utils.join(COMMITS_DIR, oldShaIdOfCommit), Commit.class);
            for (String b : oldCommit.getBlobs().keySet()) {
                 Utils.restrictedDelete(b);
@@ -180,25 +218,191 @@ public class Repository {
     public static void log() {
         String currentBranch = Utils.plainFilenamesIn(CurrentBranch).get(0);
         String currentCommitShaId = findCommit(currentBranch);
-        int i = 0;
-        while (currentCommitShaId != null && i < 3 ) {
+
+        while (currentCommitShaId != null) {
             Commit currentCommit = readObject(Utils.join(COMMITS_DIR, currentCommitShaId), Commit.class);
-
-            System.out.println("===");
-            System.out.println("commit " + currentCommitShaId);
-            System.out.println("Date: " + dateToString(currentCommit.getDate()));
-            System.out.println(currentCommit.getMessage());
-            System.out.println();
-
+            printCommit(currentCommit, currentCommitShaId);
             currentCommitShaId = currentCommit.getxParent();
-            i++;
         }
     }
+
+    //not sure print all commits or print all commits of master
+    public static void globalLog() {
+        //print all commits
+
+        for (String commitShaId : Utils.plainFilenamesIn(COMMITS_DIR)) {
+            Commit currentCommit = readObject(Utils.join(COMMITS_DIR, commitShaId), Commit.class);
+            printCommit(currentCommit, commitShaId);
+        }
+
+
+        //print all commits of master
+        /*
+        Ref ref = Utils.readObject(Utils.join(REF_DIR, "master"), Ref.class);
+
+        String currentCommitShaId = ref.getLast();
+
+        while (currentCommitShaId != null) {
+            Commit currentCommit = readObject(Utils.join(COMMITS_DIR, currentCommitShaId), Commit.class);
+            printCommit(currentCommit, currentCommitShaId);
+            currentCommitShaId = currentCommit.getxParent();
+        }
+        */
+
+    }
+
+    private static void printCommit (Commit commit, String commitId) {
+        System.out.println("===");
+        System.out.println("commit " + commitId);
+        System.out.println("Date: " + dateToString(commit.getDate()));
+        System.out.println(commit.getMessage());
+        System.out.println();
+    }
+
+    public static void find(String msg) {
+        Boolean isfind = false;
+        for (String commitShaId : Utils.plainFilenamesIn(COMMITS_DIR)) {
+            Commit currentCommit = readObject(Utils.join(COMMITS_DIR, commitShaId), Commit.class);
+            if (currentCommit.getMessage().equals(msg)) {
+                System.out.println(commitShaId);
+                isfind = true;
+            }
+        }
+        if (!isfind) {
+            System.out.println("Found no commit with that message.");
+        }
+    }
+
+    //The command is essentially checkout of an arbitrary commit that also changes the current branch head.
+    public static void reset(String commitShaId) {
+        //delete tracked file which are not i
+        List<String> blobIds = Utils.plainFilenamesIn(BLOBS_DIR);
+        List<String> fileNames = readFileNames(blobIds);
+        List<String> filesInCWD = new ArrayList<>(Utils.plainFilenamesIn(CWD));
+        Set<String> fileNamesSet = new HashSet<>(fileNames);
+        filesInCWD.removeIf(item -> fileNamesSet.contains(item));
+
+        //write blobs of this commit
+        Commit commit = Utils.readObject(Utils.join(COMMITS_DIR, commitShaId), Commit.class);
+        for (String blobShaId : commit.getBlobs().values()) {
+            writeBlobToCWD(blobShaId);
+        }
+
+        //moves the current branch’s head to that commit node
+        String currentBranch = Utils.plainFilenamesIn(CurrentBranch).get(0);
+        Ref ref = Utils.readObject(Utils.join(REF_DIR, currentBranch), Ref.class);
+        ref.setCurrent(commitShaId);
+        Utils.writeObject(Utils.join(REF_DIR, currentBranch), ref);
+
+    }
+
+    /*The 1st is little different from real git, others are same:
+    * 1.If the file is in stage_dir(not commit, just add), unstage it (get it out of stage_dir)
+    *   The file is still in CWD, just not tracked after rm. See GradeScope T14.
+    *   This just like git rm --cache [file]
+    * 2.If the file is in current commit, move it into removal_dir,and delete it in CWD.See GradeScope T13.
+    * 3.If the file is in current commit then plain Unix 'rm' it, still move it into removal_dir.See GradeScope T22.
+    * 4.neither staged nor tracked by the head commit, println: No reason to remove the file.
+    *
+    * Above realized in rm function.
+    * Below realized in other function
+    *
+    * 5.When the file in removal_dir, create it again and "add file" will simply "unremove" the file without staging.
+    *   Then the status is blank .See GradeScope T15.
+    *   This should be realized in add command, see add function.
+    * 6.Commit will clear the Removal_Dir(See GradeScope T20.) which means the commit will record this removal, so commit should have
+    *   another field to save it.
+    *   This should be realized in commit command, see commit function.
+    *
+    * */
+    public static void rm(String fileName) {
+        /* removal staging file*/
+        String unStageFile = null;
+        for (String FileInStage :Utils.plainFilenamesIn(STAGING_DIR)) {
+            Blob b = Utils.readObject(Utils.join(STAGING_DIR,FileInStage), Blob.class);
+            if (fileName.equals(b.getFileName())) {
+                unStageFile = FileInStage;
+                break;
+            }
+        }
+        if (unStageFile != null) {
+            Utils.join(STAGING_DIR, unStageFile).delete();
+            return;
+        }
+
+        /*removal commited file*/
+        String currentBranch = Utils.plainFilenamesIn(CurrentBranch).get(0);
+        String currentCommit = findCommit(currentBranch);
+        String blobShaId = findBlobInCommit(currentCommit, fileName);
+        if (blobShaId!= null) {
+            Utils.restrictedDelete(Utils.join(CWD, fileName));
+            Blob b = readObject(Utils.join(BLOBS_DIR, blobShaId), Blob.class);
+            Utils.writeObject(Utils.join(REMOVAL_DIR, blobShaId), b);
+            return;
+        }
+
+        System.out.println("No reason to remove the file.");
+
+    }
+
+    public static void status() {
+        String currentBranch = Utils.plainFilenamesIn(CurrentBranch).get(0);
+        List<String> branches = Utils.plainFilenamesIn(REF_DIR);
+        List<String> stagingBlobs = Utils.plainFilenamesIn(STAGING_DIR);
+        List<String> stagingFiles = readFileNames(stagingBlobs);
+        List<String> removalBlobs = Utils.plainFilenamesIn(REMOVAL_DIR);
+        List<String> removalFiles = readFileNames(removalBlobs);
+
+        System.out.println("=== Branches ===");
+        for (String branch : branches) {
+            if (branch.equals(currentBranch)) {
+                System.out.println("*" + branch);
+            } else {
+                System.out.println(branch);
+            }
+        }
+        System.out.println();
+
+        System.out.println("=== Staged Files ===");
+        for (String file : stagingFiles) {
+            System.out.println(file);
+        }
+        System.out.println();
+
+        System.out.println("=== Removed Files ===");
+        for (String file : removalFiles) {
+            System.out.println(file);
+        }
+        System.out.println();
+
+        System.out.println("=== Modifications Not Staged For Commit ===");
+        System.out.println();
+        System.out.println("=== Untracked Files ===");
+        System.out.println();
+
+    }
+
+    private static List<String> readFileNames (List<String> blobs) {
+        String[] files = new String[blobs.size()];
+        for (int i = 0; i < blobs.size(); i++) {
+            Blob b = readObject(Utils.join(BLOBS_DIR, blobs.get(i)), Blob.class);
+            files[i] = (b.getFileName());
+        }
+        Arrays.sort(files);
+        return Arrays.asList(files);
+    }
+
     private static void clearStaging() {
         for (String blobSha1 : Utils.plainFilenamesIn(STAGING_DIR)) {
             Boolean b = Utils.join(STAGING_DIR,blobSha1).delete();
             //System.out.println("This bulbs in staging is deleting: " +  b);
         }
+
+        for (String blobSha1 : Utils.plainFilenamesIn(REMOVAL_DIR)) {
+            Boolean b = Utils.join(REMOVAL_DIR,blobSha1).delete();
+            //System.out.println("This bulbs in staging is deleting: " +  b);
+        }
+
     }
 
     private static void  changeCurrentBranch(String newBranch) {
@@ -218,33 +422,29 @@ public class Repository {
         }
     }
 
+    /*return the branch's head or last*/
     private static String findCommit(String BranchName) {
-        List<String> nameOfRefs = Utils.plainFilenamesIn(REF_DIR);
-        for (String nameOfRef : nameOfRefs) {
-            if (nameOfRef.equals(BranchName)) {
-                Ref ref = Utils.readObject(Utils.join(REF_DIR, nameOfRef), Ref.class);
-                if (!(ref.getCurrent() == null)) {
-                    return ref.getCurrent();
-                } else {
-                   return ref.getLast();
-                }
-            }
+        Ref ref = Utils.readObject(Utils.join(REF_DIR, BranchName), Ref.class);
+        if (ref == null) {
+            System.out.println(Utils.error("No such branch exists."));
+            System.exit(0);
+            return null;
         }
-        System.out.println(Utils.error("No such branch exists."));
-        System.exit(0);
-        return null;
+
+        if (!(ref.getCurrent() == null)) {
+            return ref.getCurrent();
+        } else {
+            return ref.getLast();
+        }
+
     }
 
     private static String findBlobInCommit(String ShaIdOfCommit, String fileName) {
-        List<String> shaIdOfCommits = Utils.plainFilenamesIn(COMMITS_DIR);
         if (ShaIdOfCommit != null) {
-            for (String shaId : shaIdOfCommits) {
-                if (shaId.equals(ShaIdOfCommit)) {
-                    Commit commit = Utils.readObject(Utils.join(COMMITS_DIR, shaId), Commit.class);
-                    HashMap<String, String> blobs = commit.getBlobs();
-                    return blobs.get(fileName);
-                }
-            }
+            Commit commit = Utils.readObject(Utils.join(COMMITS_DIR, ShaIdOfCommit), Commit.class);
+            HashMap<String, String> blobs = commit.getBlobs();
+            return blobs.get(fileName);
+
         }
         System.out.println(Utils.error("No commit with that id exists"));
         System.exit(0);

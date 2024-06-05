@@ -3,13 +3,13 @@ package gitlet;
 // TODO: any imports you need here
 
 import java.io.Serializable;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 
 /** Represents a gitlet commit object which stores every commit info
  *  includes: id, message, author, time and parent Ids and bulbs of this commit
- *  Because time(date) is unique, use it to sha1
+ *  Because time(date) + msg is unique, use it to sha1
+ *  Why not just date? Because when commits in testing are so quick, they may be at the same time
  */
 public class Commit implements Serializable {
     /**
@@ -34,11 +34,13 @@ public class Commit implements Serializable {
     private String yParent;
 
     /**
-     * @param1:file'name
-     * @param2:blob'name (sha1)
+     * key: file's name
+     * value: blob's name (sha1)
      * HashMap is good here because you can easily add file or refresh(just as add)
      * */
     private HashMap<String, String> blobs;
+
+    private HashMap<String, String> removalBlobs;
 
     /* TODO: fill in the rest of this class. */
 
@@ -61,6 +63,9 @@ public class Commit implements Serializable {
     public void setBlobs(HashMap<String,String> blobs) {
         this.blobs = blobs;
     }
+    public void setRemovalBlobs(HashMap<String,String> blobs) {
+        this.removalBlobs = removalBlobs;
+    }
 
     public String getMessage() {
         return message;
@@ -81,5 +86,8 @@ public class Commit implements Serializable {
 
     public HashMap<String, String> getBlobs() {
         return blobs;
+    }
+    public HashMap<String, String> getRemovalBlobs() {
+        return removalBlobs;
     }
 }

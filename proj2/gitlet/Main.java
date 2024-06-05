@@ -62,6 +62,21 @@ public class Main {
             case "log":
                 Repository.log();
                 break;
+            case "rm":
+                Repository.rm(args[1]);
+                break;
+            case "status":
+                Repository.status();
+                break;
+            case "global-log":
+                Repository.globalLog();
+                break;
+            case "find":
+                Repository.find(args[1]);
+                break;
+            case "reset":
+                Repository.reset(args[1]);
+                break;
             default:
                 System.out.println(Utils.error("No command with that name exits."));
                 System.exit(0);
