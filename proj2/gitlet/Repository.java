@@ -128,7 +128,7 @@ public class Repository {
             bRevomalList = lastCommit.getRemovalBlobs();
 
             if (Utils.plainFilenamesIn(STAGING_DIR).size() == 0 && Utils.plainFilenamesIn(REMOVAL_DIR).size() ==0) {
-                System.out.println(Utils.error("No changes added to the commit."));
+                System.out.println("No changes added to the commit.");
                 System.exit(0);
             }
 
@@ -189,7 +189,7 @@ public class Repository {
     public static void checkoutBranch(String branchName) {
         List<String> nameOfBranches = Utils.plainFilenamesIn(CurrentBranch);
         if (nameOfBranches.get(0).equals(branchName)) {
-           System.out.println(Utils.error("No need to checkout the current branch."));
+           System.out.println("No need to checkout the current branch.");
            System.exit(0);
         } else {
            clearStaging();
@@ -201,13 +201,15 @@ public class Repository {
 
            String newShaIdOfCommit = findCommit(branchName);
            Commit commit = Utils.readObject(Utils.join(COMMITS_DIR, newShaIdOfCommit), Commit.class);
-           for (String b : commit.getBlobs().values()) {
-               if (Utils.join(CWD, b).exists()) {
-                   System.out.println(Utils.error("There is an untracked file in the way; " +
-                           "delete it, or add and commit it first."));
-                   System.exit(0);
-               } else {
-                   writeBlobToCWD(b);
+           if (commit.getBlobs() != null) { // check init
+               for (String b : commit.getBlobs().values()) {
+                   if (Utils.join(CWD, b).exists()) {
+                       System.out.println("There is an untracked file in the way; " +
+                               "delete it, or add and commit it first.");
+                       System.exit(0);
+                   } else {
+                       writeBlobToCWD(b);
+                   }
                }
            }
 
@@ -251,6 +253,18 @@ public class Repository {
 
     }
 
+    public static void branch (String branchName) {
+        if (join(REF_DIR, branchName).exists()) {
+            System.out.println("A branch with that name already exists.");
+            System.exit(0);
+        }
+        String currentBranch = plainFilenamesIn(CurrentBranch).get(0);
+        String currentCommitId = findCommit(currentBranch);
+        Ref ref = new Ref();
+        ref.setLast(currentCommitId);
+        writeObject(join(REF_DIR, branchName), ref);
+    }
+
     private static void printCommit (Commit commit, String commitId) {
         System.out.println("===");
         System.out.println("commit " + commitId);
@@ -275,7 +289,24 @@ public class Repository {
 
     //The command is essentially checkout of an arbitrary commit that also changes the current branch head.
     public static void reset(String commitShaId) {
-        //delete tracked file which are not i
+        if (!Utils.join(COMMITS_DIR, commitShaId).exists()) {
+            System.out.println("No commit with that id exists.");
+            System.exit(0);
+        }
+
+        //If a working file is untracked in the current branch and would be overwritten by the reset
+        Commit commit = Utils.readObject(Utils.join(COMMITS_DIR, commitShaId), Commit.class);
+        HashSet<String> filesInThisBranch = findfilesInBranch(plainFilenamesIn(CurrentBranch).get(0));
+        for (String file : plainFilenamesIn(CWD)) {
+            if (!filesInThisBranch.contains(file)) {
+                if (commit.getBlobs().keySet().contains(file)) {
+                    System.out.println("There is an untracked file in the way; delete it, or add and commit it first.");
+                    System.exit(0);
+                }
+            }
+        }
+
+        //delete tracked file which are not in this commitShaId
         List<String> blobIds = Utils.plainFilenamesIn(BLOBS_DIR);
         List<String> fileNames = readFileNames(blobIds);
         List<String> filesInCWD = new ArrayList<>(Utils.plainFilenamesIn(CWD));
@@ -283,7 +314,6 @@ public class Repository {
         filesInCWD.removeIf(item -> fileNamesSet.contains(item));
 
         //write blobs of this commit
-        Commit commit = Utils.readObject(Utils.join(COMMITS_DIR, commitShaId), Commit.class);
         for (String blobShaId : commit.getBlobs().values()) {
             writeBlobToCWD(blobShaId);
         }
@@ -294,6 +324,31 @@ public class Repository {
         ref.setCurrent(commitShaId);
         Utils.writeObject(Utils.join(REF_DIR, currentBranch), ref);
 
+    }
+    public static void rmBranch(String branchName) {
+        if (!join(REF_DIR, branchName).exists()) {
+            System.out.println("A branch with that name does not exist.");
+            System.exit(0);
+        }
+        if (plainFilenamesIn(CurrentBranch).get(0).equals(branchName)) {
+            System.out.println("Cannot remove the current branch.");
+            System.exit(0);
+        }
+        join(REF_DIR, branchName).delete();
+    }
+
+    private static HashSet<String> findfilesInBranch (String branch) {
+        HashSet<String> files = new HashSet<>();
+        Ref ref = readObject(Utils.join(REF_DIR, branch), Ref.class);
+        String masterId = ref.getLast();
+        Commit current = readObject(Utils.join(COMMITS_DIR, masterId), Commit.class);
+        while (current.getxParent() != null) {
+            if (current.getBlobs() != null) {
+                files.addAll(current.getBlobs().keySet());
+            }
+            current = readObject(Utils.join(COMMITS_DIR, current.getxParent()), Commit.class);
+        }
+        return files;
     }
 
     /*The 1st is little different from real git, others are same:
@@ -417,7 +472,7 @@ public class Repository {
             File checkoutFile = new File(CWD, blob.getFileName());
             Utils.writeContents(checkoutFile, blob.getFileContent());
         } else {
-            System.out.println(Utils.error("File does not exist in that commit."));
+            System.out.println("File does not exist in that commit.");
             System.exit(0);
         }
     }
@@ -426,7 +481,7 @@ public class Repository {
     private static String findCommit(String BranchName) {
         Ref ref = Utils.readObject(Utils.join(REF_DIR, BranchName), Ref.class);
         if (ref == null) {
-            System.out.println(Utils.error("No such branch exists."));
+            System.out.println("No such branch exists.");
             System.exit(0);
             return null;
         }
@@ -446,7 +501,7 @@ public class Repository {
             return blobs.get(fileName);
 
         }
-        System.out.println(Utils.error("No commit with that id exists"));
+        System.out.println("No commit with that id exists");
         System.exit(0);
         return null;
     }

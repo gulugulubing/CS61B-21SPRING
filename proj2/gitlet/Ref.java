@@ -12,6 +12,7 @@ public class Ref implements Serializable {
 
     /* This branch's current commit(head)
     *  If current is null, it means that head is not changed and default to last.
+    *  Actually there's no need to do that, the teacher said gitlet would not have detached head state
     * */
     private String current;
 

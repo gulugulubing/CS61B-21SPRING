@@ -11,39 +11,39 @@ public class Main {
     public static void main(String[] args) {
 
         if (args.length == 0) {
-            System.out.println(Utils.error("Please enter a command."));
+            System.out.println("Please enter a command.");
             System.exit(0);
         }
 
 
         String firstArg = args[0];
         if (!firstArg.equals("init") && !Repository.GITLET_DIR.exists()) {
-            System.out.println(Utils.error("Not in an initialized Gitlet directory."));
+            System.out.println("Not in an initialized Gitlet directory.");
             System.exit(0);
         }
 
         switch(firstArg) {
             case "init":
                 if (Repository.GITLET_DIR.exists()) {
-                    System.out.println(Utils.error("A Gitlet version-control system already exists in the current directory."));
+                    System.out.println("A Gitlet version-control system already exists in the current directory.");
                     System.exit(0);
                 }
                 Repository.init();
                 break;
             case "add":
                 if (args.length > 2) {
-                    System.out.println(Utils.error("Incorrect operands."));
+                    System.out.println("Incorrect operands.");
                     System.exit(0);
                 }
                 Repository.add(args[1]);
                 break;
             case "commit":
                 if (args.length > 2) {
-                    System.out.println(Utils.error("Incorrect operands."));
+                    System.out.println("Incorrect operands.");
                     System.exit(0);
                 }
                 if (args.length == 1) {
-                    System.out.println(Utils.error("Please enter a commit message."));
+                    System.out.println("Please enter a commit message.");
                     System.exit(0);
                 }
                 Repository.commit(args[1]);
@@ -52,7 +52,7 @@ public class Main {
                 if (args[1].equals("--")) {
                     Repository.checkoutFile1(args[2]);
                 }
-                if (args[2].equals("--")) {
+                if (args.length ==3 && args[2].equals("--")) {
                     Repository.checkoutFile2(args[1], args[3]);
                 }
                 if (args.length == 2) {
@@ -76,6 +76,12 @@ public class Main {
                 break;
             case "reset":
                 Repository.reset(args[1]);
+                break;
+            case "branch":
+                Repository.branch(args[1]);
+                break;
+            case "rm-branch":
+                Repository.rmBranch(args[1]);
                 break;
             default:
                 System.out.println(Utils.error("No command with that name exits."));
