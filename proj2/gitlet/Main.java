@@ -51,12 +51,13 @@ public class Main {
             case "checkout":
                 if (args[1].equals("--")) {
                     Repository.checkoutFile1(args[2]);
-                }
-                if (args.length ==3 && args[2].equals("--")) {
+                } else if (args.length ==4 && args[2].equals("--")) {
                     Repository.checkoutFile2(args[1], args[3]);
-                }
-                if (args.length == 2) {
+                } else if (args.length == 2) {
                     Repository.checkoutBranch(args[1]);
+                } else {
+                    System.out.println("Incorrect operands.");
+                    System.exit(0);
                 }
                 break;
             case "log":
@@ -84,7 +85,7 @@ public class Main {
                 Repository.rmBranch(args[1]);
                 break;
             default:
-                System.out.println(Utils.error("No command with that name exits."));
+                System.out.println("No command with that name exits.");
                 System.exit(0);
         }
     }

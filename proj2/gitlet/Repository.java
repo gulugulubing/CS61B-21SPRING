@@ -58,6 +58,11 @@ public class Repository {
             BLOBS_DIR.mkdir();
         }
 
+        if (!join(CWD, filename).exists()) {
+            System.out.println("File does not exist.");
+            System.exit(0);
+        }
+
         addFromRemoval(filename);
 
         File filepath = Utils.join(CWD, filename);
@@ -111,6 +116,10 @@ public class Repository {
      *  Add the staging blobs to the map
      */
     public static void commit(String msg) {
+        if (msg.equals("")) {
+            System.out.println("Please enter a commit message.");
+            System.exit(0);
+        }
         Commit commit = new Commit();
         commit.setMessage(msg);
         String currentBranch = Utils.plainFilenamesIn(CurrentBranch).get(0);
@@ -182,11 +191,19 @@ public class Repository {
     }
 
     public static void checkoutFile2(String commitId, String file) {
+        if (!join(COMMITS_DIR, commitId).exists()) {
+            System.out.println("No commit with that id exists.");
+            System.exit(0);
+        }
         String shaIdOfBlob = findBlobInCommit(commitId, file);
         writeBlobToCWD(shaIdOfBlob);
     }
 
     public static void checkoutBranch(String branchName) {
+        if (!join(REF_DIR,branchName).exists()) {
+            System.out.println("No such branch exists.");
+            System.exit(0);
+        }
         List<String> nameOfBranches = Utils.plainFilenamesIn(CurrentBranch);
         if (nameOfBranches.get(0).equals(branchName)) {
            System.out.println("No need to checkout the current branch.");
@@ -195,20 +212,22 @@ public class Repository {
            clearStaging();
            String oldShaIdOfCommit = findCommit(nameOfBranches.get(0));
            Commit oldCommit = Utils.readObject(Utils.join(COMMITS_DIR, oldShaIdOfCommit), Commit.class);
-           for (String b : oldCommit.getBlobs().keySet()) {
-                Utils.restrictedDelete(b);
+           if (oldCommit.getBlobs() != null) {//check if it is init
+               for (String fileName : oldCommit.getBlobs().keySet()) {
+                   Utils.restrictedDelete(fileName);
+               }
            }
 
            String newShaIdOfCommit = findCommit(branchName);
            Commit commit = Utils.readObject(Utils.join(COMMITS_DIR, newShaIdOfCommit), Commit.class);
-           if (commit.getBlobs() != null) { // check init
-               for (String b : commit.getBlobs().values()) {
-                   if (Utils.join(CWD, b).exists()) {
+           if (commit.getBlobs() != null) { // check if it is init
+               for (String fileName : commit.getBlobs().keySet()) {
+                   if (Utils.join(CWD, fileName).exists()) {
                        System.out.println("There is an untracked file in the way; " +
                                "delete it, or add and commit it first.");
                        System.exit(0);
                    } else {
-                       writeBlobToCWD(b);
+                       writeBlobToCWD(commit.getBlobs().get(fileName));
                    }
                }
            }
@@ -371,6 +390,16 @@ public class Repository {
     *
     * */
     public static void rm(String fileName) {
+        File filepath = Utils.join(CWD, fileName);
+        String fileContent = Utils.readContentsAsString(filepath);
+        String sha1Code = sha1(fileContent,fileName);
+
+        if (!join(BLOBS_DIR, sha1Code).exists() && !join(REMOVAL_DIR,sha1Code).exists()
+                && !join(COMMITS_DIR,sha1Code).exists()) {
+            System.out.println("No reason to remove the file.");
+            System.exit(0);
+        }
+
         /* removal staging file*/
         String unStageFile = null;
         for (String FileInStage :Utils.plainFilenamesIn(STAGING_DIR)) {
@@ -395,8 +424,6 @@ public class Repository {
             Utils.writeObject(Utils.join(REMOVAL_DIR, blobShaId), b);
             return;
         }
-
-        System.out.println("No reason to remove the file.");
 
     }
 
@@ -501,7 +528,7 @@ public class Repository {
             return blobs.get(fileName);
 
         }
-        System.out.println("No commit with that id exists");
+        System.out.println("No commit with that id exists.");
         System.exit(0);
         return null;
     }
