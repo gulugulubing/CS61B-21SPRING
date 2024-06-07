@@ -1,7 +1,5 @@
 package gitlet;
 
-// TODO: any imports you need here
-
 import java.io.Serializable;
 import java.util.Date;
 import java.util.HashMap;
@@ -13,7 +11,6 @@ import java.util.HashMap;
  */
 public class Commit implements Serializable {
     /**
-     * TODO: add instance variables here.
      *
      * List all instance variables of the Commit class here with a useful
      * comment above them describing what that variable represents and how that
@@ -42,8 +39,6 @@ public class Commit implements Serializable {
 
     private HashMap<String, String> removalBlobs;
 
-    /* TODO: fill in the rest of this class. */
-
     public void setMessage(String message) {
         this.message = message;
     }
@@ -60,10 +55,10 @@ public class Commit implements Serializable {
         this.yParent = yParent;
     }
 
-    public void setBlobs(HashMap<String,String> blobs) {
+    public void setBlobs(HashMap<String, String> blobs) {
         this.blobs = blobs;
     }
-    public void setRemovalBlobs(HashMap<String,String> blobs) {
+    public void setRemovalBlobs(HashMap<String, String> blobs) {
         this.removalBlobs = removalBlobs;
     }
 

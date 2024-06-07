@@ -22,7 +22,7 @@ public class Main {
             System.exit(0);
         }
 
-        switch(firstArg) {
+        switch (firstArg) {
             case "init":
                 if (Repository.GITLET_DIR.exists()) {
                     System.out.println("A Gitlet version-control system already exists in the current directory.");
@@ -51,7 +51,7 @@ public class Main {
             case "checkout":
                 if (args[1].equals("--")) {
                     Repository.checkoutFile1(args[2]);
-                } else if (args.length ==4 && args[2].equals("--")) {
+                } else if (args.length == 4 && args[2].equals("--")) {
                     Repository.checkoutFile2(args[1], args[3]);
                 } else if (args.length == 2) {
                     Repository.checkoutBranch(args[1]);

@@ -6,8 +6,6 @@ import java.util.*;
 
 import static gitlet.Utils.*;
 
-// TODO: any imports you need here
-
 /** Represents a gitlet repository.
  *  This is where the init(create folders) and middle level logic of git commands
  *  and will call the Commit.Class and Blob.Class to do the low level(detailed) logic of commands
@@ -27,7 +25,6 @@ import static gitlet.Utils.*;
  */
 public class Repository {
     /**
-     * TODO: add instance variables here.
      *
      * List all instance variables of the Repository class here with a useful
      * comment above them describing what that variable represents and how that
@@ -67,7 +64,7 @@ public class Repository {
 
         File filepath = Utils.join(CWD, filename);
         String fileContent = Utils.readContentsAsString(filepath);
-        String sha1Code = sha1(fileContent,filename);
+        String sha1Code = sha1(fileContent, filename);
 
         File blobPath = Utils.join(BLOBS_DIR, sha1Code);
         if (!blobPath.exists()) {
@@ -136,7 +133,7 @@ public class Repository {
             bList = lastCommit.getBlobs();
             bRevomalList = lastCommit.getRemovalBlobs();
 
-            if (Utils.plainFilenamesIn(STAGING_DIR).size() == 0 && Utils.plainFilenamesIn(REMOVAL_DIR).size() ==0) {
+            if (Utils.plainFilenamesIn(STAGING_DIR).size() == 0 && Utils.plainFilenamesIn(REMOVAL_DIR).size() == 0) {
                 System.out.println("No changes added to the commit.");
                 System.exit(0);
             }
@@ -192,7 +189,7 @@ public class Repository {
 
     public static void checkoutFile2(String commitId, String file) {
         commitId = findFullId(commitId);
-        if (!join(COMMITS_DIR, commitId).exists() || commitId == null) {
+        if (commitId == null || !join(COMMITS_DIR, commitId).exists()) {
             System.out.println("No commit with that id exists.");
             System.exit(0);
         }
@@ -204,46 +201,46 @@ public class Repository {
     private static String findFullId(String shortId) {
         for (String id : plainFilenamesIn(COMMITS_DIR)) {
             if (id.contains(shortId)) {
-               return id;
+                return id;
             }
         }
         return null;
     }
 
     public static void checkoutBranch(String branchName) {
-        if (!join(REF_DIR,branchName).exists()) {
+        if (!join(REF_DIR, branchName).exists()) {
             System.out.println("No such branch exists.");
             System.exit(0);
         }
         List<String> nameOfBranches = Utils.plainFilenamesIn(CurrentBranch);
         if (nameOfBranches.get(0).equals(branchName)) {
-           System.out.println("No need to checkout the current branch.");
-           System.exit(0);
+            System.out.println("No need to checkout the current branch.");
+            System.exit(0);
         } else {
-           clearStaging();
-           String oldShaIdOfCommit = findCommit(nameOfBranches.get(0));
-           Commit oldCommit = Utils.readObject(Utils.join(COMMITS_DIR, oldShaIdOfCommit), Commit.class);
-           if (oldCommit.getBlobs() != null) {//check if it is init
-               for (String fileName : oldCommit.getBlobs().keySet()) {
-                   Utils.restrictedDelete(fileName);
-               }
-           }
+            clearStaging();
+            String oldShaIdOfCommit = findCommit(nameOfBranches.get(0));
+            Commit oldCommit = Utils.readObject(Utils.join(COMMITS_DIR, oldShaIdOfCommit), Commit.class);
+            if (oldCommit.getBlobs() != null) { //check if it is init
+                for (String fileName : oldCommit.getBlobs().keySet()) {
+                    Utils.restrictedDelete(fileName);
+                }
+            }
 
-           String newShaIdOfCommit = findCommit(branchName);
-           Commit commit = Utils.readObject(Utils.join(COMMITS_DIR, newShaIdOfCommit), Commit.class);
-           if (commit.getBlobs() != null) { // check if it is init
-               for (String fileName : commit.getBlobs().keySet()) {
-                   if (Utils.join(CWD, fileName).exists()) {
-                       System.out.println("There is an untracked file in the way; " +
-                               "delete it, or add and commit it first.");
-                       System.exit(0);
-                   } else {
-                       writeBlobToCWD(commit.getBlobs().get(fileName));
-                   }
-               }
-           }
+            String newShaIdOfCommit = findCommit(branchName);
+            Commit commit = Utils.readObject(Utils.join(COMMITS_DIR, newShaIdOfCommit), Commit.class);
+            if (commit.getBlobs() != null) { // check if it is init
+                for (String fileName : commit.getBlobs().keySet()) {
+                    if (Utils.join(CWD, fileName).exists()) {
+                        System.out.println("There is an untracked file in the way; "
+                                + "delete it, or add and commit it first.");
+                        System.exit(0);
+                    } else {
+                        writeBlobToCWD(commit.getBlobs().get(fileName));
+                    }
+                }
+            }
 
-           changeCurrentBranch(branchName);
+            changeCurrentBranch(branchName);
         }
     }
 
@@ -283,7 +280,7 @@ public class Repository {
 
     }
 
-    public static void branch (String branchName) {
+    public static void branch(String branchName) {
         if (join(REF_DIR, branchName).exists()) {
             System.out.println("A branch with that name already exists.");
             System.exit(0);
@@ -295,7 +292,7 @@ public class Repository {
         writeObject(join(REF_DIR, branchName), ref);
     }
 
-    private static void printCommit (Commit commit, String commitId) {
+    private static void printCommit(Commit commit, String commitId) {
         System.out.println("===");
         System.out.println("commit " + commitId);
         System.out.println("Date: " + dateToString(commit.getDate()));
@@ -321,7 +318,7 @@ public class Repository {
     public static void reset(String commitShaId) {
         commitShaId = findFullId(commitShaId);
 
-        if (!Utils.join(COMMITS_DIR, commitShaId).exists() || commitShaId==null) {
+        if (commitShaId == null || !Utils.join(COMMITS_DIR, commitShaId).exists()) {
             System.out.println("No commit with that id exists.");
             System.exit(0);
         }
@@ -371,7 +368,7 @@ public class Repository {
         join(REF_DIR, branchName).delete();
     }
 
-    private static HashSet<String> findfilesInBranch (String branch) {
+    private static HashSet<String> findfilesInBranch(String branch) {
         HashSet<String> files = new HashSet<>();
         Ref ref = readObject(Utils.join(REF_DIR, branch), Ref.class);
         String masterId = ref.getLast();
@@ -399,7 +396,8 @@ public class Repository {
     * 5.When the file in removal_dir, create it again and "add file" will simply "unremove" the file without staging.
     *   Then the status is blank .See GradeScope T15.
     *   This should be realized in add command, see add function.
-    * 6.Commit will clear the Removal_Dir(See GradeScope T20.) which means the commit will record this removal, so commit should have
+    * 6.Commit will clear the Removal_Dir(See GradeScope T20.)
+    * which means the commit will record this removal, so commit should have
     *   another field to save it.
     *   This should be realized in commit command, see commit function.
     *
@@ -419,10 +417,10 @@ public class Repository {
 
         /* removal staging file*/
         String unStageFile = null;
-        for (String FileInStage :Utils.plainFilenamesIn(STAGING_DIR)) {
-            Blob b = Utils.readObject(Utils.join(STAGING_DIR,FileInStage), Blob.class);
+        for (String fileInStage :Utils.plainFilenamesIn(STAGING_DIR)) {
+            Blob b = Utils.readObject(Utils.join(STAGING_DIR, fileInStage), Blob.class);
             if (fileName.equals(b.getFileName())) {
-                unStageFile = FileInStage;
+                unStageFile = fileInStage;
                 break;
             }
         }
@@ -435,7 +433,7 @@ public class Repository {
         String currentBranch = Utils.plainFilenamesIn(CurrentBranch).get(0);
         String currentCommit = findCommit(currentBranch);
         String blobShaId = findBlobInCommit(currentCommit, fileName);
-        if (blobShaId!= null) {
+        if (blobShaId != null) {
             Utils.restrictedDelete(Utils.join(CWD, fileName));
             Blob b = readObject(Utils.join(BLOBS_DIR, blobShaId), Blob.class);
             Utils.writeObject(Utils.join(REMOVAL_DIR, blobShaId), b);
@@ -481,7 +479,7 @@ public class Repository {
 
     }
 
-    private static List<String> readFileNames (List<String> blobs) {
+    private static List<String> readFileNames(List<String> blobs) {
         String[] files = new String[blobs.size()];
         for (int i = 0; i < blobs.size(); i++) {
             Blob b = readObject(Utils.join(BLOBS_DIR, blobs.get(i)), Blob.class);
@@ -493,12 +491,12 @@ public class Repository {
 
     private static void clearStaging() {
         for (String blobSha1 : Utils.plainFilenamesIn(STAGING_DIR)) {
-            Boolean b = Utils.join(STAGING_DIR,blobSha1).delete();
+            Boolean b = Utils.join(STAGING_DIR, blobSha1).delete();
             //System.out.println("This bulbs in staging is deleting: " +  b);
         }
 
         for (String blobSha1 : Utils.plainFilenamesIn(REMOVAL_DIR)) {
-            Boolean b = Utils.join(REMOVAL_DIR,blobSha1).delete();
+            Boolean b = Utils.join(REMOVAL_DIR, blobSha1).delete();
             //System.out.println("This bulbs in staging is deleting: " +  b);
         }
 
@@ -510,7 +508,7 @@ public class Repository {
         }
         Utils.writeContents(Utils.join(CurrentBranch, newBranch), "");
     }
-    private static void writeBlobToCWD (String shaIdOfBlob) {
+    private static void writeBlobToCWD(String shaIdOfBlob) {
         if (shaIdOfBlob != null) {
             Blob blob = Utils.readObject(Utils.join(BLOBS_DIR, shaIdOfBlob), Blob.class);
             File checkoutFile = new File(CWD, blob.getFileName());
@@ -522,8 +520,8 @@ public class Repository {
     }
 
     /*return the branch's head or last*/
-    private static String findCommit(String BranchName) {
-        Ref ref = Utils.readObject(Utils.join(REF_DIR, BranchName), Ref.class);
+    private static String findCommit(String branchName) {
+        Ref ref = Utils.readObject(Utils.join(REF_DIR, branchName), Ref.class);
         if (ref == null) {
             System.out.println("No such branch exists.");
             System.exit(0);
@@ -538,9 +536,9 @@ public class Repository {
 
     }
 
-    private static String findBlobInCommit(String ShaIdOfCommit, String fileName) {
-        if (ShaIdOfCommit != null) {
-            Commit commit = Utils.readObject(Utils.join(COMMITS_DIR, ShaIdOfCommit), Commit.class);
+    private static String findBlobInCommit(String shaIdOfCommit, String fileName) {
+        if (shaIdOfCommit != null) {
+            Commit commit = Utils.readObject(Utils.join(COMMITS_DIR, shaIdOfCommit), Commit.class);
             HashMap<String, String> blobs = commit.getBlobs();
             return blobs.get(fileName);
 
