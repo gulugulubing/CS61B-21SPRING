@@ -191,12 +191,23 @@ public class Repository {
     }
 
     public static void checkoutFile2(String commitId, String file) {
+        commitId = findFullId(commitId);
         if (!join(COMMITS_DIR, commitId).exists()) {
             System.out.println("No commit with that id exists.");
             System.exit(0);
         }
+
         String shaIdOfBlob = findBlobInCommit(commitId, file);
         writeBlobToCWD(shaIdOfBlob);
+    }
+
+    private static String findFullId(String shortId) {
+        for (String id : plainFilenamesIn(COMMITS_DIR)) {
+            if (id.contains(shortId)) {
+               return id;
+            }
+        }
+        return null;
     }
 
     public static void checkoutBranch(String branchName) {
@@ -308,6 +319,8 @@ public class Repository {
 
     //The command is essentially checkout of an arbitrary commit that also changes the current branch head.
     public static void reset(String commitShaId) {
+        commitShaId = findFullId(commitShaId);
+
         if (!Utils.join(COMMITS_DIR, commitShaId).exists()) {
             System.out.println("No commit with that id exists.");
             System.exit(0);
@@ -336,6 +349,8 @@ public class Repository {
         for (String blobShaId : commit.getBlobs().values()) {
             writeBlobToCWD(blobShaId);
         }
+
+        clearStaging();
 
         //moves the current branch’s head to that commit node
         String currentBranch = Utils.plainFilenamesIn(CurrentBranch).get(0);
@@ -391,13 +406,15 @@ public class Repository {
     * */
     public static void rm(String fileName) {
         File filepath = Utils.join(CWD, fileName);
-        String fileContent = Utils.readContentsAsString(filepath);
-        String sha1Code = sha1(fileContent,fileName);
+        if (filepath.exists()) {
+            String fileContent = Utils.readContentsAsString(filepath);
+            String sha1Code = sha1(fileContent, fileName);
 
-        if (!join(BLOBS_DIR, sha1Code).exists() && !join(REMOVAL_DIR,sha1Code).exists()
-                && !join(COMMITS_DIR,sha1Code).exists()) {
-            System.out.println("No reason to remove the file.");
-            System.exit(0);
+            if (!join(BLOBS_DIR, sha1Code).exists() && !join(REMOVAL_DIR, sha1Code).exists()
+                    && !join(COMMITS_DIR, sha1Code).exists()) {
+                System.out.println("No reason to remove the file.");
+                System.exit(0);
+            }
         }
 
         /* removal staging file*/
