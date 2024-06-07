@@ -192,7 +192,7 @@ public class Repository {
 
     public static void checkoutFile2(String commitId, String file) {
         commitId = findFullId(commitId);
-        if (!join(COMMITS_DIR, commitId).exists()) {
+        if (!join(COMMITS_DIR, commitId).exists() || commitId == null) {
             System.out.println("No commit with that id exists.");
             System.exit(0);
         }
@@ -321,7 +321,7 @@ public class Repository {
     public static void reset(String commitShaId) {
         commitShaId = findFullId(commitShaId);
 
-        if (!Utils.join(COMMITS_DIR, commitShaId).exists()) {
+        if (!Utils.join(COMMITS_DIR, commitShaId).exists() || commitShaId==null) {
             System.out.println("No commit with that id exists.");
             System.exit(0);
         }
