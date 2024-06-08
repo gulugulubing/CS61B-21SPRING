@@ -84,6 +84,9 @@ public class Main {
             case "rm-branch":
                 Repository.rmBranch(args[1]);
                 break;
+            case "merge":
+                Repository.merge(args[1]);
+                break;
             default:
                 System.out.println("No command with that name exits.");
                 System.exit(0);

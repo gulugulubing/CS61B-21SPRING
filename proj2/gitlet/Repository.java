@@ -10,7 +10,6 @@ import static gitlet.Utils.*;
  *  This is where the init(create folders) and middle level logic of git commands
  *  and will call the Commit.Class and Blob.Class to do the low level(detailed) logic of commands
  *
- *
  *  The structure of a  Repository is as follows:
  *  .gitlet/ -- top level folder for all persistent data
  *      - staging area/ -- folder containing current staged files which are represented by blobs
@@ -24,7 +23,7 @@ import static gitlet.Utils.*;
  *      - currentBranch/ --folder containing just one file, file name is current working branch,nothing else here
  */
 public class Repository {
-    /**
+    /*
      *
      * List all instance variables of the Repository class here with a useful
      * comment above them describing what that variable represents and how that
@@ -45,7 +44,7 @@ public class Repository {
     public static final File REF_DIR = join(GITLET_DIR, "refs");
 
     /*The file name in this folder denotes current branch*/
-    public static final File CurrentBranch = join(GITLET_DIR, "currentBranch");
+    public static final File CURRENT_BRANCH = join(GITLET_DIR, "currentBranch");
 
     /** Generate persistent blobs and if the blob's name(sha1) is new, add it to blobs dir and staging dir.
      *  User sha1(content) as the blob's name
@@ -100,8 +99,8 @@ public class Repository {
         STAGING_DIR.mkdir();
         REMOVAL_DIR.mkdir();
         REF_DIR.mkdir();
-        CurrentBranch.mkdir();
-        Utils.writeContents(Utils.join(CurrentBranch, "master"), "");
+        CURRENT_BRANCH.mkdir();
+        Utils.writeContents(Utils.join(CURRENT_BRANCH, "master"), "");
         Ref firstRef = new Ref();
         Utils.writeObject(Utils.join(REF_DIR, "master"), firstRef);
         commit("initial commit");
@@ -119,7 +118,7 @@ public class Repository {
         }
         Commit commit = new Commit();
         commit.setMessage(msg);
-        String currentBranch = Utils.plainFilenamesIn(CurrentBranch).get(0);
+        String currentBranch = Utils.plainFilenamesIn(CURRENT_BRANCH ).get(0);
         Ref ref = Utils.readObject(Utils.join(REF_DIR, currentBranch), Ref.class);
         if (Utils.plainFilenamesIn(COMMITS_DIR).size() == 0) {
             commit.setDate(new Date(0L));
@@ -154,7 +153,7 @@ public class Repository {
             for (String blobSha1 : Utils.plainFilenamesIn(REMOVAL_DIR)) {
                 Blob b = Utils.readObject(Utils.join(REMOVAL_DIR, blobSha1), Blob.class);
                 bRevomalList.put(b.getFileName(), blobSha1);
-
+                bList.remove(b.getFileName());
             }
 
             clearStaging();
@@ -181,7 +180,7 @@ public class Repository {
     */
     public static void checkoutFile1(String file) {
 
-        List<String> nameOfBranches = Utils.plainFilenamesIn(CurrentBranch);
+        List<String> nameOfBranches = Utils.plainFilenamesIn(CURRENT_BRANCH );
         String shaIdOfCommit = findCommit(nameOfBranches.get(0));
         String shaIdOfBlob = findBlobInCommit(shaIdOfCommit, file);
         writeBlobToCWD(shaIdOfBlob);
@@ -212,7 +211,7 @@ public class Repository {
             System.out.println("No such branch exists.");
             System.exit(0);
         }
-        List<String> nameOfBranches = Utils.plainFilenamesIn(CurrentBranch);
+        List<String> nameOfBranches = Utils.plainFilenamesIn(CURRENT_BRANCH );
         if (nameOfBranches.get(0).equals(branchName)) {
             System.out.println("No need to checkout the current branch.");
             System.exit(0);
@@ -245,7 +244,7 @@ public class Repository {
     }
 
     public static void log() {
-        String currentBranch = Utils.plainFilenamesIn(CurrentBranch).get(0);
+        String currentBranch = Utils.plainFilenamesIn(CURRENT_BRANCH).get(0);
         String currentCommitShaId = findCommit(currentBranch);
 
         while (currentCommitShaId != null) {
@@ -285,7 +284,7 @@ public class Repository {
             System.out.println("A branch with that name already exists.");
             System.exit(0);
         }
-        String currentBranch = plainFilenamesIn(CurrentBranch).get(0);
+        String currentBranch = plainFilenamesIn(CURRENT_BRANCH).get(0);
         String currentCommitId = findCommit(currentBranch);
         Ref ref = new Ref();
         ref.setLast(currentCommitId);
@@ -325,7 +324,7 @@ public class Repository {
 
         //If a working file is untracked in the current branch and would be overwritten by the reset
         Commit commit = Utils.readObject(Utils.join(COMMITS_DIR, commitShaId), Commit.class);
-        HashSet<String> filesInThisBranch = findfilesInBranch(plainFilenamesIn(CurrentBranch).get(0));
+        HashSet<String> filesInThisBranch = findfilesInBranch(plainFilenamesIn(CURRENT_BRANCH).get(0));
         for (String file : plainFilenamesIn(CWD)) {
             if (!filesInThisBranch.contains(file)) {
                 if (commit.getBlobs().keySet().contains(file)) {
@@ -350,7 +349,7 @@ public class Repository {
         clearStaging();
 
         //moves the current branch’s head to that commit node
-        String currentBranch = Utils.plainFilenamesIn(CurrentBranch).get(0);
+        String currentBranch = Utils.plainFilenamesIn(CURRENT_BRANCH).get(0);
         Ref ref = Utils.readObject(Utils.join(REF_DIR, currentBranch), Ref.class);
         ref.setCurrent(commitShaId);
         Utils.writeObject(Utils.join(REF_DIR, currentBranch), ref);
@@ -361,7 +360,7 @@ public class Repository {
             System.out.println("A branch with that name does not exist.");
             System.exit(0);
         }
-        if (plainFilenamesIn(CurrentBranch).get(0).equals(branchName)) {
+        if (plainFilenamesIn(CURRENT_BRANCH).get(0).equals(branchName)) {
             System.out.println("Cannot remove the current branch.");
             System.exit(0);
         }
@@ -429,21 +428,20 @@ public class Repository {
             return;
         }
 
-        /*removal commited file*/
-        String currentBranch = Utils.plainFilenamesIn(CurrentBranch).get(0);
+        /*removal committed file*/
+        String currentBranch = Utils.plainFilenamesIn(CURRENT_BRANCH).get(0);
         String currentCommit = findCommit(currentBranch);
         String blobShaId = findBlobInCommit(currentCommit, fileName);
         if (blobShaId != null) {
             Utils.restrictedDelete(Utils.join(CWD, fileName));
             Blob b = readObject(Utils.join(BLOBS_DIR, blobShaId), Blob.class);
             Utils.writeObject(Utils.join(REMOVAL_DIR, blobShaId), b);
-            return;
         }
 
     }
 
     public static void status() {
-        String currentBranch = Utils.plainFilenamesIn(CurrentBranch).get(0);
+        String currentBranch = Utils.plainFilenamesIn(CURRENT_BRANCH).get(0);
         List<String> branches = Utils.plainFilenamesIn(REF_DIR);
         List<String> stagingBlobs = Utils.plainFilenamesIn(STAGING_DIR);
         List<String> stagingFiles = readFileNames(stagingBlobs);
@@ -502,11 +500,11 @@ public class Repository {
 
     }
 
-    private static void  changeCurrentBranch(String newBranch) {
-        for (String branch : Utils.plainFilenamesIn(CurrentBranch)) {
-            Utils.join(CurrentBranch, branch).delete();
+    private static void changeCurrentBranch(String newBranch) {
+        for (String branch : Utils.plainFilenamesIn(CURRENT_BRANCH)) {
+            Utils.join(CURRENT_BRANCH, branch).delete();
         }
-        Utils.writeContents(Utils.join(CurrentBranch, newBranch), "");
+        Utils.writeContents(Utils.join(CURRENT_BRANCH, newBranch), "");
     }
     private static void writeBlobToCWD(String shaIdOfBlob) {
         if (shaIdOfBlob != null) {
@@ -548,9 +546,72 @@ public class Repository {
         return null;
     }
 
-
     private static String dateToString(Date date) {
         SimpleDateFormat dateFormat = new SimpleDateFormat("EEE MMM dd HH:mm:ss yyyy Z", Locale.ENGLISH);
         return  dateFormat.format(date);
+    }
+
+    public static void merge(String givenBranch) {
+        if (plainFilenamesIn(STAGING_DIR).size() > 0 || plainFilenamesIn(REMOVAL_DIR).size() > 0 ) {
+            System.out.println("You have uncommitted changes.");
+            System.exit(0);
+        }
+        if (!plainFilenamesIn(REF_DIR).contains(givenBranch)) {
+            System.out.println("A branch with that name does not exist.");
+            System.exit(0);
+        }
+        if (plainFilenamesIn(CURRENT_BRANCH).get(0).equals(givenBranch)) {
+            System.out.println("Cannot merge a branch with itself.");
+            System.exit(0);
+        }
+
+        String splitPoint = splitPoint(givenBranch);
+        String currentCommitId = findCommit(plainFilenamesIn(CURRENT_BRANCH).get(0));
+        String givenCommitId = findCommit(givenBranch);
+        if (splitPoint.equals(givenCommitId)) {
+            System.out.println("Given branch is an ancestor of the current branch.");
+            System.exit(0);
+        } else if (splitPoint.equals(currentCommitId)) {
+            checkoutBranch(givenBranch);
+            System.out.println("Current branch fast-forwarded.");
+        }
+    }
+
+    private static String splitPoint(String givenBranch) {
+        String currentBranch = plainFilenamesIn(CURRENT_BRANCH).get(0);
+        String lastCommitIdInCurrent = findCommit(currentBranch);
+        Commit lastCommitInCurrent = readObject(join(COMMITS_DIR, lastCommitIdInCurrent), Commit.class);
+
+        String lastCommitIdInGiven = findCommit(givenBranch);
+        Commit lastCommitInGiven = readObject(join(COMMITS_DIR, lastCommitIdInGiven), Commit.class);
+
+        ArrayList<String> parentsOfCurrent = new ArrayList<>();
+        HashSet<String> parentsOfGiven = new HashSet<>();
+        while (true) {
+            parentsOfCurrent.add(lastCommitIdInCurrent);
+            lastCommitIdInCurrent = lastCommitInCurrent.getxParent();
+            if (lastCommitIdInCurrent == null) {
+                break;
+            }
+            lastCommitInCurrent = readObject(join(COMMITS_DIR, lastCommitIdInCurrent), Commit.class);
+        }
+
+        while (true) {
+            parentsOfGiven.add(lastCommitIdInGiven);
+            lastCommitIdInGiven = lastCommitInGiven.getxParent();
+            if (lastCommitIdInGiven == null) {
+                break;
+            }
+            lastCommitInGiven = readObject(join(COMMITS_DIR, lastCommitIdInGiven), Commit.class);
+        }
+
+        String splitPoint = null;
+        for (String c : parentsOfCurrent) {
+            if (parentsOfGiven.contains(c)) {
+                splitPoint =  c;
+                break;
+            }
+        }
+        return splitPoint;
     }
 }
