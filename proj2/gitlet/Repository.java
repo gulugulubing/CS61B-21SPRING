@@ -650,7 +650,8 @@ public class Repository {
                 } else if (blobIdInSplit.equals(blobIdInCurrent)) {
                     //modified in given, should replace the file to CWD and add it
                     writeBlobToCWD(blobIdInGiven);
-                    add(fileName);
+                    Blob b = readObject(join(BLOBS_DIR, blobIdInGiven),Blob.class);
+                    writeObject(join(STAGING_DIR, blobIdInGiven), b);
                 } else { // both modified
                     if (!blobIdInCurrent.equals(blobIdInGiven)) {
                         conflicted = true;
@@ -667,7 +668,8 @@ public class Repository {
                 } else if (blobIdInGiven != null && blobIdInCurrent == null) {
                     //existed only in given
                     writeBlobToCWD(blobIdInGiven);
-                    add(fileName);
+                    Blob b = readObject(join(BLOBS_DIR, blobIdInGiven),Blob.class);
+                    writeObject(join(STAGING_DIR, blobIdInGiven), b);
                 } else {
                     if (!blobIdInCurrent.equals(blobIdInGiven)) {
                         conflicted = true;
@@ -702,6 +704,7 @@ public class Repository {
         if (conflicted) {
             System.out.println("Encountered a merge conflict.");
         }
+
     }
 
     private static String handleConflict(String blobIdInCurrent, String blobIdInGiven) {
