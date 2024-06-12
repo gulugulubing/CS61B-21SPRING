@@ -58,7 +58,7 @@ public class Commit implements Serializable {
     public void setBlobs(HashMap<String, String> blobs) {
         this.blobs = blobs;
     }
-    public void setRemovalBlobs(HashMap<String, String> blobs) {
+    public void setRemovalBlobs(HashMap<String, String> removalBlobs) {
         this.removalBlobs = removalBlobs;
     }
 

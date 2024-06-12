@@ -69,13 +69,13 @@ public class Repository {
         String sha1Code = sha1(fileContent, filename);
 
         File blobPath = Utils.join(BLOBS_DIR, sha1Code);
-       // if (!blobPath.exists()) {
+        if (!blobPath.exists()) {
             //only new blob will create because olds have been all recorded
             Blob blob = new Blob(filename, fileContent);
             Utils.writeObject(blobPath, blob);
             File stagePath = Utils.join(STAGING_DIR, sha1Code);
             Utils.writeObject(stagePath, blob);
-        //}
+        }
     }
 
     /*see rm function     */
