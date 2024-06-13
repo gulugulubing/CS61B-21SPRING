@@ -673,6 +673,7 @@ public class Repository {
                     writeObject(join(STAGING_DIR, blobIdInGiven), b);
                 } else { // both modified
                     if (!blobIdInCurrent.equals(blobIdInGiven)) {
+                        conflicted = true;
                         String newContent = handleConflict(blobIdInCurrent, blobIdInGiven);
                         writeContents(join(CWD, fileName), newContent);
                         add(fileName);
@@ -719,6 +720,7 @@ public class Repository {
             }
         }
         commit("Merged " + givenBranch + " into " + plainFilenamesIn(CURRENT_BRANCH).get(0) + ".");
+
         if (conflicted) {
             System.out.println("Encountered a merge conflict.");
         }
