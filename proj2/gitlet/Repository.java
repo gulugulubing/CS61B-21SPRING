@@ -742,7 +742,7 @@ public class Repository {
         }
         mergedContent = "<<<<<<< HEAD\n" + contentInCurrent
                         + "=======\n"  + contentInGiven
-                        + ">>>>>>>";
+                        + ">>>>>>>\n";
         //System.out.println(mergedContent);
         return mergedContent;
     }
