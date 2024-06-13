@@ -612,6 +612,11 @@ public class Repository {
             System.out.println("Current branch fast-forwarded.");
             System.exit(0);
         }
+        //System.out.println(splitPoint);
+        //System.out.println(currentCommitId);
+        //System.out.println(splitPoint == currentCommitId);
+        //System.out.println(givenBranch);
+
 
         //key is fileName, value is blobId
         HashMap<String, String> fileInSplit = findBlobsHashMap(splitPoint);
@@ -668,7 +673,6 @@ public class Repository {
                     writeObject(join(STAGING_DIR, blobIdInGiven), b);
                 } else { // both modified
                     if (!blobIdInCurrent.equals(blobIdInGiven)) {
-                        conflicted = true;
                         String newContent = handleConflict(blobIdInCurrent, blobIdInGiven);
                         writeContents(join(CWD, fileName), newContent);
                         add(fileName);
@@ -791,6 +795,7 @@ public class Repository {
             if (parentsOfGiven.get(c) != null ) {
                 if (parentsOfGiven.get(c) < minDepth) {
                     splitPoint = c;
+                    minDepth = parentsOfCurrent.get(c);
                 }
             }
         }
