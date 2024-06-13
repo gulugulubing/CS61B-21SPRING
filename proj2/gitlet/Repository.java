@@ -612,10 +612,10 @@ public class Repository {
             System.out.println("Current branch fast-forwarded.");
             System.exit(0);
         }
-        System.out.println(splitPoint);
-        System.out.println(currentCommitId);
-        System.out.println(splitPoint == givenCommitId);
-        System.out.println(givenCommitId);
+        //System.out.println(splitPoint);
+        //System.out.println(currentCommitId);
+        //System.out.println(splitPoint == givenCommitId);
+        //System.out.println(givenCommitId);
 
 
         //key is fileName, value is blobId
