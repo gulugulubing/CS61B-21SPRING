@@ -68,9 +68,22 @@ public class Repository {
         String fileContent = Utils.readContentsAsString(filepath);
         String sha1Code = sha1(fileContent, filename);
 
+        String currentCommit = findCommit(plainFilenamesIn(CURRENT_BRANCH).get(0));
+        HashMap<String, String> blobsInCurrentCommit = findBlobsHashMap(currentCommit);
+
         File blobPath = Utils.join(BLOBS_DIR, sha1Code);
-        if (!blobPath.exists()) {
-            //only new blob will create because olds have been all recorded
+        if (blobsInCurrentCommit != null && blobsInCurrentCommit.containsValue(sha1Code)) {
+            /*
+            If the current working version of the file is identical
+            to the version in the current commit, do not stage it to be added,
+            and remove it from the staging area if it is already there
+            (as can happen when a file is changed, added,
+            and then changed back to it’s original version).
+             */
+            if (blobPath.exists()) {
+                blobPath.delete();
+            }
+        } else {
             Blob blob = new Blob(filename, fileContent);
             Utils.writeObject(blobPath, blob);
             File stagePath = Utils.join(STAGING_DIR, sha1Code);
@@ -181,8 +194,9 @@ public class Repository {
                 commit.setyParent(givenRef.getLast());
             }
         }
-
-        String sha1Code = Utils.sha1(dateToString(commit.getDate()), commit.getMessage());
+        String xParent =  commit.getxParent();
+        String sha1Code = Utils.sha1(dateToString(commit.getDate()), commit.getMessage(),
+                xParent == null ? " ": xParent, plainFilenamesIn(CURRENT_BRANCH).get(0));
         File commitPath = Utils.join(COMMITS_DIR, sha1Code);
         Utils.writeObject(commitPath, commit);
 
