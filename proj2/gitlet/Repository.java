@@ -612,10 +612,10 @@ public class Repository {
             System.out.println("Current branch fast-forwarded.");
             System.exit(0);
         }
-        //System.out.println(splitPoint);
-        //System.out.println(currentCommitId);
-        //System.out.println(splitPoint == currentCommitId);
-        //System.out.println(givenBranch);
+        System.out.println(splitPoint);
+        System.out.println(currentCommitId);
+        System.out.println(splitPoint == givenCommitId);
+        System.out.println(givenCommitId);
 
 
         //key is fileName, value is blobId
@@ -797,7 +797,7 @@ public class Repository {
             if (parentsOfGiven.get(c) != null ) {
                 if (parentsOfGiven.get(c) < minDepth) {
                     splitPoint = c;
-                    minDepth = parentsOfCurrent.get(c);
+                    minDepth = parentsOfGiven.get(c);
                 }
             }
         }
